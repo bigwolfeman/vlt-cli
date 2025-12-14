@@ -115,3 +115,36 @@ directories captured above]
 |-----------|------------|-------------------------------------|
 | [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
 | [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+
+## Phase 7: Polish & Cross-Cutting
+
+**Goal**: Refine UX and handle edge cases.
+
+- [x] T032 Implement configuration wizard for `vlt init` (asking for API keys)
+- [x] T033 Add error handling for network failures in Librarian (retry logic)
+- [x] T034 Optimize `vlt thread push` latency (ensure minimal imports on startup)
+- [x] T035 Add `--json` output flag to all read commands for machine consumption
+
+## Phase 8: The Knowledge Graph (Current Focus)
+
+**Goal**: Transform the flat log into a connected semantic graph.
+
+- [ ] T036 Add `Tag` model and `Node.tags` relationship.
+- [ ] T037 Add `Reference` model for cross-thread linking.
+- [ ] T038 Implement `vlt tag` and `vlt link` commands.
+- [ ] T039 Update `vlt thread seek` to support tag filtering.
+
+## Phase 9: Project Manager Scaffolding (Future)
+
+**Goal**: Integrate `vlt` with the `Document-MCP` RAG harness.
+- **Discovery**: `Document-MCP` uses a filesystem-based Vault (`data/vaults/<user>/*.md`).
+- **Strategy**: **Markdown Sync**.
+    - `vlt` will export Thread Summaries + Recent Nodes as formatted Markdown files.
+    - `Document-MCP` will ingest these files automatically via its existing RAG indexer (`backend/src/services/rag_index.py`).
+- **Tasks**:
+    - [ ] T040 Implement `vlt export` command (Markdown format).
+    - [ ] T041 Add `VLT_SYNC_PATH` config to `vlt` (pointing to `Document-MCP/data/vaults/default/vlt`).
+    - [ ] T042 Update `Librarian` to auto-export changed threads to `VLT_SYNC_PATH`.
+
+## Implementation Strategy
+# ...

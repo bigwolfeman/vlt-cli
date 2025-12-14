@@ -90,6 +90,23 @@
 - [x] T034 Optimize `vlt thread push` latency (ensure minimal imports on startup)
 - [x] T035 Add `--json` output flag to all read commands for machine consumption
 
+## Phase 8: The Knowledge Graph
+
+**Goal**: Transform the flat log into a connected semantic graph.
+
+- [x] T036 Add `Tag` model and `Node.tags` relationship.
+- [x] T037 Add `Reference` model for cross-thread linking.
+- [x] T038 Implement `vlt tag` and `vlt link` commands.
+- [ ] T039 Update `vlt thread seek` to support tag filtering.
+
+## Phase 9: Project Manager Scaffolding
+
+**Goal**: Integrate `vlt` with the `Document-MCP` RAG harness via Markdown Sync.
+
+- [ ] T040 Implement `vlt export` command (Markdown format).
+- [ ] T041 Add `VLT_SYNC_PATH` config to `vlt` (pointing to `Document-MCP/data/vaults/default/vlt`).
+- [ ] T042 Update `Librarian` to auto-export changed threads to `VLT_SYNC_PATH`.
+
 ## Implementation Strategy
 
 1.  **MVP (Phase 1-3)**: You will have a working logging tool. Summaries will be empty/static.

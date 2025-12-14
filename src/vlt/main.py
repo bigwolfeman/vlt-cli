@@ -38,6 +38,19 @@ CORE WORKFLOW:
 2. RESUME:  Run `vlt thread read <thread_id>` to load the semantic state.
 3. THINK:   Run `vlt thread push <thread_id> "<thought>"` to log progress.
 4. SEARCH:  Run `vlt thread seek "<concept>"` to find past solutions.
+
+META-COGNITION STRATEGIES:
+1. PROACTIVE INTROSPECTION: Before starting a complex task, ask yourself:
+   "Is this a multi-step problem where I might lose my train of thought?"
+   If YES, create a thread immediately and log your plan.
+
+2. RELEVANCE PREDICTION: When you make a decision, ask:
+   "Will I need to know WHY I did this in 3 days?"
+   If YES, push the reasoning (e.g., "Chose SQLite over Postgres for portability").
+
+3. CONTEXT OFFLOADING: If your context window is filling up,
+   summarize your current state into `vlt`, then clear your context.
+   Trust `vlt` to hold the state while you perform the execution.
 """
 
 app = typer.Typer(name="vlt", help=APP_HELP, no_args_is_help=True)
@@ -236,4 +249,33 @@ def seek(query: str, project: str = typer.Option(None, "--project", "-p", help="
         
     for res in results:
         score_color = "green" if res.score > 0.8 else "yellow"
-        print(f"[[{score_color}]{res.score:.2f}[/{score_color}]] [bold]{res.thread_id}[/bold]: {res.content}")
+        print(f"[[{score_color}]{res.score:.2f}[/{score_color}]] [bold]{res.thread_id}[/bold] ({res.node_id[:8]}): {res.content}")
+
+@app.command()
+def tag(node_id: str, name: str):
+    """
+    Attach a semantic tag to a specific node (thought).
+    
+    Tags allow for cross-cutting taxonomy (e.g., #bug, #architecture).
+    """
+    try:
+        tag = service.add_tag(node_id, name)
+        print(f"[green]Tagged node {node_id[:8]} with #{tag.name}[/green]")
+    except Exception as e:
+        print(f"[red]Error tagging node: {e}[/red]")
+
+@app.command()
+def link(source_node_id: str, target_thread: str, note: str = "Relates to"):
+    """
+    Create a semantic link between a thought and another thread.
+    
+    Use this to connect reasoning chains (e.g., 'This bug relates to physics-engine').
+    """
+    try:
+        ref = service.add_reference(source_node_id, target_thread, note)
+        print(f"[green]Linked node {source_node_id[:8]} -> {target_thread} ({note})[/green]")
+    except Exception as e:
+        print(f"[red]Error linking node: {e}[/red]")
+
+if __name__ == "__main__":
+    app()

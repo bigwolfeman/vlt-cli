@@ -48,6 +48,12 @@ class IVaultService(ABC):
     @abstractmethod
     def search(self, query: str, project_id: Optional[str] = None) -> List[SearchResult]: ...
 
+    @abstractmethod
+    def add_tag(self, node_id: str, tag_name: str) -> Any: ...
+
+    @abstractmethod
+    def add_reference(self, source_node_id: str, target_thread_id: str, note: str) -> Any: ...
+
 class ILibrarian(ABC):
     @abstractmethod
     def process_pending_nodes(self) -> int:

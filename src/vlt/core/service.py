@@ -6,15 +6,66 @@ from sqlalchemy import select, desc
 from sqlalchemy.exc import SQLAlchemyError
 
 from vlt.core.interfaces import IVaultService, ThreadStateView, ProjectOverviewView, SearchResult, NodeView
-from vlt.core.models import Project, Thread, Node, State
+from vlt.core.models import Project, Thread, Node, State, Tag, Reference
 from vlt.db import get_db
-from vlt.core.vector import VectorService
-from vlt.lib.llm import OpenRouterLLMProvider
 
 class VaultError(Exception):
     pass
 
 class SqliteVaultService(IVaultService):
+    def add_tag(self, node_id: str, tag_name: str) -> Tag:
+        try:
+            # Check if tag exists
+            tag = self.db.scalars(select(Tag).where(Tag.name == tag_name)).first()
+            if not tag:
+                tag = Tag(name=tag_name)
+                self.db.add(tag)
+            
+            node = self.db.get(Node, node_id)
+            if not node:
+                raise VaultError(f"Node {node_id} not found.")
+            
+            if tag not in node.tags:
+                node.tags.append(tag)
+            
+            self.db.commit()
+            self.db.refresh(tag)
+            return tag
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            raise VaultError(f"Database error adding tag: {str(e)}")
+
+    def add_reference(self, source_node_id: str, target_thread_id: str, note: str) -> Reference:
+        try:
+            # Check if source node exists
+            node = self.db.get(Node, source_node_id)
+            if not node:
+                raise VaultError(f"Source Node {source_node_id} not found.")
+            
+            # Check if target thread exists (handle project/thread slug)
+            if "/" in target_thread_id:
+                _, target_slug = target_thread_id.split("/")
+            else:
+                target_slug = target_thread_id
+                
+            thread = self.db.get(Thread, target_slug)
+            if not thread:
+                raise VaultError(f"Target Thread {target_slug} not found.")
+
+            ref = Reference(
+                id=str(uuid.uuid4()),
+                source_node_id=source_node_id,
+                target_thread_id=target_slug,
+                note=note
+            )
+            self.db.add(ref)
+            self.db.commit()
+            self.db.refresh(ref)
+            return ref
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            raise VaultError(f"Database error adding reference: {str(e)}")
+
     def __init__(self, db: Session = None):
         self._db = db
 
