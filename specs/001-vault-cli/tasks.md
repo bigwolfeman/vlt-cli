@@ -16,21 +16,21 @@
 
 **Goal**: Initialize project structure and configuration.
 
-- [ ] T001 Create project directories (`src/vlt`, `tests`, `src/vlt/core`, `src/vlt/cli`, `src/vlt/lib`)
-- [ ] T002 Initialize `pyproject.toml` with dependencies (`typer`, `pydantic`, `sqlalchemy`, `rich`, `numpy`, `openai` or `httpx` for OpenRouter)
-- [ ] T003 Create `src/vlt/config.py` for loading environment variables (LLM keys, DB path) using `pydantic-settings`
-- [ ] T004 Create `src/vlt/db.py` to handle SQLite connection and session management
+- [x] T001 Create project directories (`src/vlt`, `tests`, `src/vlt/core`, `src/vlt/cli`, `src/vlt/lib`)
+- [x] T002 Initialize `pyproject.toml` with dependencies (`typer`, `pydantic`, `sqlalchemy`, `rich`, `numpy`, `openai` or `httpx` for OpenRouter)
+- [x] T003 Create `src/vlt/config.py` for loading environment variables (LLM keys, DB path) using `pydantic-settings`
+- [x] T004 Create `src/vlt/db.py` to handle SQLite connection and session management
 
 ## Phase 2: Foundational
 
 **Goal**: Define core data models and abstract interfaces.
 
-- [ ] T005 Implement `Project` model in `src/vlt/core/models.py`
-- [ ] T006 Implement `Thread` model in `src/vlt/core/models.py`
-- [ ] T007 Implement `Node` model in `src/vlt/core/models.py`
-- [ ] T008 Implement `State` model in `src/vlt/core/models.py` with polymorphic targeting
-- [ ] T009 Create `src/vlt/core/interfaces.py` defining `IVaultService`, `ILibrarian`, `ILLMProvider`
-- [ ] T010 Implement database migration/initialization script in `src/vlt/core/migrations.py` (using `alembic` or simple `Base.metadata.create_all`)
+- [x] T005 Implement `Project` model in `src/vlt/core/models.py`
+- [x] T006 Implement `Thread` model in `src/vlt/core/models.py`
+- [x] T007 Implement `Node` model in `src/vlt/core/models.py`
+- [x] T008 Implement `State` model in `src/vlt/core/models.py` with polymorphic targeting
+- [x] T009 Create `src/vlt/core/interfaces.py` defining `IVaultService`, `ILibrarian`, `ILLMProvider`
+- [x] T010 Implement database migration/initialization script in `src/vlt/core/migrations.py` (using `alembic` or simple `Base.metadata.create_all`)
 
 ## Phase 3: User Story 1 - Initialize and Log Thoughts
 
@@ -38,12 +38,12 @@
 **Priority**: P1
 **Independent Test**: Create project, thread, and push thoughts; verify in DB.
 
-- [ ] T011 [US1] Implement `SqliteVaultService` in `src/vlt/core/service.py` (create_project, create_thread)
-- [ ] T012 [US1] Implement `add_thought` logic in `SqliteVaultService` ensuring <50ms write time
-- [ ] T013 [US1] Create CLI entry point `src/vlt/main.py` using `Typer`
-- [ ] T014 [US1] Implement `vlt init` command to setup local DB
-- [ ] T015 [US1] Implement `vlt thread new` command
-- [ ] T016 [US1] Implement `vlt thread push` command
+- [x] T011 [US1] Implement `SqliteVaultService` in `src/vlt/core/service.py` (create_project, create_thread)
+- [x] T012 [US1] Implement `add_thought` logic in `SqliteVaultService` ensuring <50ms write time
+- [x] T013 [US1] Create CLI entry point `src/vlt/main.py` using `Typer`
+- [x] T014 [US1] Implement `vlt init` command to setup local DB
+- [x] T015 [US1] Implement `vlt thread new` command
+- [x] T016 [US1] Implement `vlt thread push` command
 
 ## Phase 4: User Story 2 - Retrieve Context and Overview
 
@@ -51,10 +51,10 @@
 **Priority**: P1
 **Independent Test**: Populate DB with mock data, run `vlt overview`, verify output format.
 
-- [ ] T017 [US2] Implement `get_project_overview` in `SqliteVaultService` (fetching Project + latest State)
-- [ ] T018 [US2] Implement `get_thread_state` in `SqliteVaultService` (fetching Thread + State + recent Nodes)
-- [ ] T019 [US2] Implement `vlt overview` command using `Rich` tables/tree
-- [ ] T020 [US2] Implement `vlt thread read` command using `Rich` markdown rendering
+- [x] T017 [US2] Implement `get_project_overview` in `SqliteVaultService` (fetching Project + latest State)
+- [x] T018 [US2] Implement `get_thread_state` in `SqliteVaultService` (fetching Thread + State + recent Nodes)
+- [x] T019 [US2] Implement `vlt overview` command using `Rich` tables/tree
+- [x] T020 [US2] Implement `vlt thread read` command using `Rich` markdown rendering
 
 ## Phase 5: User Story 3 - Asynchronous Summarization
 
@@ -62,12 +62,12 @@
 **Priority**: P2
 **Independent Test**: Add nodes, run `Librarian.process_pending_nodes`, verify State table updates.
 
-- [ ] T021 [US3] Implement `OpenRouterLLMProvider` in `src/vlt/lib/llm.py` (generate_summary, get_embedding)
-- [ ] T022 [US3] Implement `Librarian` logic in `src/vlt/core/librarian.py` (fetching unsummarized nodes)
-- [ ] T023 [US3] Implement `process_pending_nodes` logic (calling LLM, creating/updating State, marking Nodes processed)
-- [ ] T024 [US3] Implement `update_project_overviews` logic (aggregating Thread summaries)
-- [ ] T025 [US3] Add `vlt librarian run` command to `src/vlt/main.py`
-- [ ] T026 [US3] Add daemon mode flag to `vlt librarian run` (simple loop with sleep)
+- [x] T021 [US3] Implement `OpenRouterLLMProvider` in `src/vlt/lib/llm.py` (generate_summary, get_embedding)
+- [x] T022 [US3] Implement `Librarian` logic in `src/vlt/core/librarian.py` (fetching unsummarized nodes)
+- [x] T023 [US3] Implement `process_pending_nodes` logic (calling LLM, creating/updating State, marking Nodes processed)
+- [x] T024 [US3] Implement `update_project_overviews` logic (aggregating Thread summaries)
+- [x] T025 [US3] Add `vlt librarian run` command to `src/vlt/main.py`
+- [x] T026 [US3] Add daemon mode flag to `vlt librarian run` (simple loop with sleep)
 
 ## Phase 6: User Story 4 - Semantic Search
 
@@ -75,20 +75,20 @@
 **Priority**: P3
 **Independent Test**: Seed DB with embeddings, run `search`, verify semantic matches.
 
-- [ ] T027 [US4] Implement `VectorService` in `src/vlt/core/vector.py` using `numpy` for in-memory cosine similarity
-- [ ] T028 [US4] Integrate embedding generation into `Librarian` (during processing loop)
-- [ ] T029 [US4] Implement `search` method in `SqliteVaultService` (combining VectorService + DB fetch)
-- [ ] T030 [US4] Implement `vlt thread seek` command
-- [ ] T031 [US4] Add `--project` flag to `vlt thread seek` for global search
+- [x] T027 [US4] Implement `VectorService` in `src/vlt/core/vector.py` using `numpy` for in-memory cosine similarity
+- [x] T028 [US4] Integrate embedding generation into `Librarian` (during processing loop)
+- [x] T029 [US4] Implement `search` method in `SqliteVaultService` (combining VectorService + DB fetch)
+- [x] T030 [US4] Implement `vlt thread seek` command
+- [x] T031 [US4] Add `--project` flag to `vlt thread seek` for global search
 
 ## Phase 7: Polish & Cross-Cutting
 
 **Goal**: Refine UX and handle edge cases.
 
-- [ ] T032 Implement configuration wizard for `vlt init` (asking for API keys)
-- [ ] T033 Add error handling for network failures in Librarian (retry logic)
-- [ ] T034 Optimize `vlt thread push` latency (ensure minimal imports on startup)
-- [ ] T035 Add `--json` output flag to all read commands for machine consumption
+- [x] T032 Implement configuration wizard for `vlt init` (asking for API keys)
+- [x] T033 Add error handling for network failures in Librarian (retry logic)
+- [x] T034 Optimize `vlt thread push` latency (ensure minimal imports on startup)
+- [x] T035 Add `--json` output flag to all read commands for machine consumption
 
 ## Implementation Strategy
 
