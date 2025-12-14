@@ -14,9 +14,9 @@ class Librarian(ILibrarian):
 
     @property
     def db(self) -> Session:
-        if self._db:
-            return self._db
-        return next(get_db())
+        if self._db is None:
+            self._db = next(get_db())
+        return self._db
 
     def process_pending_nodes(self) -> int:
         """

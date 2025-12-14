@@ -9,7 +9,7 @@ class OpenRouterLLMProvider(ILLMProvider):
     def __init__(self):
         self.api_key = settings.openrouter_api_key
         self.base_url = settings.openrouter_base_url
-        self.model = "anthropic/claude-3.5-haiku" 
+        self.model = settings.openrouter_model
         self.embedding_model = "text-embedding-3-small" # Requires OpenAI or compatible provider via OpenRouter
 
     def generate_summary(self, context: str, new_content: str) -> str:
