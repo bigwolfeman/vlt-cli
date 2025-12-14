@@ -2,77 +2,82 @@
 
 ## 1. Installation
 
-Ensure you have Python 3.11 or higher installed.
-
 1.  Unzip the package.
 2.  Open a terminal in the `vlt-cli` directory.
-3.  Install the package in editable mode (recommended for beta):
-
+3.  Install:
     ```bash
     pip install -e .
     ```
 
 ## 2. Configuration
 
-1.  Initialize the local database:
-
+1.  Initialize the DB:
     ```bash
     vlt init
     ```
 
-2.  Set your OpenRouter API Key (Required for AI features):
-
+2.  Set API Key:
     ```bash
     vlt config set-key sk-or-v1-...
     ```
 
-    *Note: The key is stored locally in `~/.vlt/.env`.*
+## 3. Project Setup (The Identity Layer)
 
-## 3. Core Workflow
+Go to your project directory and initialize its identity:
 
-**Scenario**: You are starting a new task to optimize a physics engine.
+```bash
+cd ~/Projects/my-app
+vlt init --project my-app
+```
+*This creates a `vlt.toml` file. Commit this to Git.*
+
+## 4. Core Workflow
 
 1.  **Start a Thread**:
     ```bash
-    vlt thread new physics-engine optimization "Starting SAT implementation."
+    vlt thread new optimization "Starting SAT implementation."
+    ```
+    *(Note: Project is auto-detected from `vlt.toml`)*
+
+2.  **Log Thoughts**:
+    ```bash
+    vlt thread push optimization "SAT is too slow."
     ```
 
-2.  **Log Thoughts (The Loop)**:
+3.  **Sign Your Work (Multi-Agent)**:
     ```bash
-    vlt thread push physics-engine/optimization "SAT is too slow for concave shapes."
-    vlt thread push physics-engine/optimization "Switching to GJK algorithm."
-    ```
-
-3.  **Tag Important Moments**:
-    ```bash
-    # Get the node ID from the push output or read command
-    vlt tag <node_id> pivot
+    vlt --author "Architect" thread push optimization "Suggesting pivot to GJK."
     ```
 
 4.  **Review State**:
     ```bash
-    vlt thread read physics-engine/optimization
+    vlt thread read optimization
     ```
+    *(Shows Summary + Last 5 thoughts)*
 
-5.  **Run the Librarian (Background)**:
-    In a separate terminal, run this to process your thoughts into summaries:
+5.  **Deep Dive**:
     ```bash
-    vlt librarian run --daemon
+    vlt thread read optimization --all
+    vlt thread read optimization --search "pivot"
     ```
 
-6.  **Search**:
+## 5. The Knowledge Graph
+
+- **Tagging**:
     ```bash
-    vlt thread seek "convex algorithm"
+    # Get node ID from read output
+    vlt tag <node_id> pivot
     ```
 
-## 4. Advanced: The Knowledge Graph
+- **Linking**:
+    ```bash
+    vlt link <node_id> other-thread --note "Caused by"
+    ```
 
-- **Link Threads**: Connect related work.
-  ```bash
-  vlt link <source_node_id> <target_thread_slug> --note "Related to"
-  ```
+## 6. The Librarian
 
-- **Project Overview**: See everything at a glance.
-  ```bash
-  vlt overview physics-engine
-  ```
+Run this in the background to enable Summarization and Search:
+
+```bash
+vlt librarian run --daemon
+```

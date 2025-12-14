@@ -52,10 +52,21 @@ META-COGNITION STRATEGIES:
 3. CONTEXT OFFLOADING: If your context window is filling up,
    summarize your current state into `vlt`, then clear your context.
    Trust `vlt` to hold the state while you perform the execution.
+
+4. PROJECT ORCHESTRATION: Do not just log code. Create a dedicated thread
+   (e.g., 'planning' or 'meta') to track high-level milestones, architectural
+   decisions, and blockers. Use this thread as the "Director" of your work.
+"""
+
+THREAD_HELP = """
+The Cognitive Loop: Manage reasoning streams.
+
+Use these commands to Create (new), Log (push), Resume (read), and Recall (seek)
+your train of thought. This is your primary interface for interacting with the Vault.
 """
 
 app = typer.Typer(name="vlt", help=APP_HELP, no_args_is_help=True)
-thread_app = typer.Typer(name="thread", help="Manage thought streams (create, push, read, search).")
+thread_app = typer.Typer(name="thread", help=THREAD_HELP)
 config_app = typer.Typer(name="config", help="Manage configuration and keys.")
 app.add_typer(thread_app, name="thread")
 app.add_typer(config_app, name="config")
@@ -91,6 +102,20 @@ def set_key(key: str):
 from vlt.core.identity import create_vlt_toml, load_project_identity
 
 # ...
+
+state = {"author": "user", "show_hint": False}
+
+@app.callback()
+def main(
+    author: str = typer.Option("user", "--author", help="Identify the speaker (e.g. 'Architect')."),
+):
+    """
+    Vault CLI: Cognitive Hard Drive.
+    """
+    if author == "user" and not os.environ.get("VLT_AUTHOR"):
+        state["show_hint"] = True
+    else:
+        state["author"] = author or os.environ.get("VLT_AUTHOR", "user")
 
 @app.command()
 def init(
@@ -150,9 +175,12 @@ def new_thread(
         # Project might already exist, which is fine for now
         pass
         
-    thread = service.create_thread(project_id=project, name=name, initial_thought=initial_thought)
+    thread = service.create_thread(project_id=project, name=name, initial_thought=initial_thought, author=state["author"])
     print(f"[bold green]CREATED:[/bold green] {thread.project_id}/{thread.id}")
     print(f"STATUS: {thread.status}")
+    
+    if state["show_hint"]:
+        print("[dim](Tip: Use --author to sign your thoughts)[/dim]")
 @thread_app.command("push")
 def push_thought(thread_id: str, content: str):
     """
@@ -176,8 +204,11 @@ def push_thought(thread_id: str, content: str):
     else:
         thread_slug = thread_id
 
-    node = service.add_thought(thread_id=thread_slug, content=content)
+    node = service.add_thought(thread_id=thread_slug, content=content, author=state["author"])
     print(f"[bold green]OK:[/bold green] {node.thread_id}/{node.sequence_id}")
+    
+    if state["show_hint"]:
+        print("[dim](Tip: Use --author to sign your thoughts)[/dim]")
 @app.command("overview")
 def overview(project_id: str = typer.Argument(None, help="Project ID"), json_output: bool = typer.Option(False, "--json", help="Output as JSON")):
     """
@@ -212,14 +243,35 @@ def overview(project_id: str = typer.Argument(None, help="Project ID"), json_out
         
     print(table)
 @thread_app.command("read")
-def read_thread(thread_id: str, json_output: bool = typer.Option(False, "--json", help="Output as JSON")):
+def read_thread(
+    thread_id: str, 
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    show_all: bool = typer.Option(False, "--all", "-a", help="Show full thread history."),
+    search_query: str = typer.Option(None, "--search", "-s", help="Semantic search within this thread.")
+):
     """
     The Cognitive Loop: Load the Semantic State.
     
-    Retrieves the compressed 'Truth' of a thread (State) and the most recent raw thoughts.
-    Use this to resume work on a specific problem without reading the entire history.
+    Retrieves the compressed 'Truth' of a thread (State).
+    By default, shows only the Summary and last 5 thoughts.
+    Use --all to see everything, or --search to find specific details.
     """
-    view = service.get_thread_state(thread_id)
+    # 1. Search Mode
+    if search_query:
+        results = service.search_thread(thread_id, search_query)
+        if json_output:
+            print(json.dumps([r.model_dump() for r in results], default=str))
+            return
+            
+        print(Panel(f"Search Results for '{search_query}' in {thread_id}", border_style="cyan"))
+        for res in results:
+            score_color = "green" if res.score > 0.8 else "yellow"
+            print(f"[[{score_color}]{res.score:.2f}[/{score_color}]] {res.content}")
+        return
+
+    # 2. Read Mode
+    limit = -1 if show_all else 5
+    view = service.get_thread_state(thread_id, limit=limit)
     
     if json_output:
         print(json.dumps(view.model_dump(), default=str))
@@ -230,9 +282,10 @@ def read_thread(thread_id: str, json_output: bool = typer.Option(False, "--json"
     if view.meta:
          print(Panel(str(view.meta), title="Meta", border_style="yellow"))
 
-    print("\n[bold]Recent Thoughts:[/bold]")
+    print(f"\n[bold]Recent Thoughts ({'All' if show_all else 'Last 5'}):[/bold]")
     for node in view.recent_nodes:
-        print(f"[dim]{node.sequence_id} | {node.timestamp.strftime('%H:%M:%S')}[/dim] {node.content}")
+        author_str = f"[{node.author}]" if node.author != "user" else ""
+        print(f"[dim]{node.sequence_id} | {node.timestamp.strftime('%H:%M:%S')}[/dim] [cyan]{author_str}[/cyan] {node.content}")
 librarian_app = typer.Typer(name="librarian", help="Background daemon for summarization and embeddings.")
 app.add_typer(librarian_app, name="librarian")
 

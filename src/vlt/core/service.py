@@ -8,6 +8,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from vlt.core.interfaces import IVaultService, ThreadStateView, ProjectOverviewView, SearchResult, NodeView
 from vlt.core.models import Project, Thread, Node, State, Tag, Reference
 from vlt.db import get_db
+from vlt.core.vector import VectorService
+from vlt.lib.llm import OpenRouterLLMProvider
 
 class VaultError(Exception):
     pass
@@ -92,14 +94,14 @@ class SqliteVaultService(IVaultService):
             self.db.rollback()
             raise VaultError(f"Database error creating project: {str(e)}")
 
-    def create_thread(self, project_id: str, name: str, initial_thought: str) -> Thread:
+    def create_thread(self, project_id: str, name: str, initial_thought: str, author: str = "user") -> Thread:
         try:
             thread_id = name.lower().replace(" ", "-")
             thread = Thread(id=thread_id, project_id=project_id, status="active")
             self.db.add(thread)
             self.db.commit() 
             
-            self.add_thought(thread_id, initial_thought)
+            self.add_thought(thread_id, initial_thought, author=author)
             
             self.db.refresh(thread)
             return thread
@@ -107,7 +109,7 @@ class SqliteVaultService(IVaultService):
             self.db.rollback()
             raise VaultError(f"Database error creating thread: {str(e)}")
 
-    def add_thought(self, thread_id: str, content: str) -> Node:
+    def add_thought(self, thread_id: str, content: str, author: str = "user") -> Node:
         try:
             last_node = self.db.scalars(
                 select(Node)
@@ -124,6 +126,7 @@ class SqliteVaultService(IVaultService):
                 thread_id=thread_id,
                 sequence_id=new_sequence_id,
                 content=content,
+                author=author,
                 prev_node_id=prev_node_id,
                 timestamp=datetime.now(timezone.utc)
             )
@@ -135,7 +138,7 @@ class SqliteVaultService(IVaultService):
             self.db.rollback()
             raise VaultError(f"Database error adding thought: {str(e)}")
 
-    def get_thread_state(self, thread_id: str) -> ThreadStateView:
+    def get_thread_state(self, thread_id: str, limit: int = 5) -> ThreadStateView:
         if "/" in thread_id:
             _, thread_slug = thread_id.split("/")
         else:
@@ -147,12 +150,12 @@ class SqliteVaultService(IVaultService):
             .where(State.target_type == "thread")
         ).first()
 
-        nodes = self.db.scalars(
-            select(Node)
-            .where(Node.thread_id == thread_slug)
-            .order_by(desc(Node.sequence_id))
-            .limit(10)
-        ).all()
+        query = select(Node).where(Node.thread_id == thread_slug).order_by(desc(Node.sequence_id))
+        
+        if limit > 0:
+            query = query.limit(limit)
+            
+        nodes = self.db.scalars(query).all()
         
         node_views = [
             NodeView(
@@ -167,6 +170,41 @@ class SqliteVaultService(IVaultService):
             recent_nodes=node_views,
             meta=state.meta if state else {}
         )
+
+    def search_thread(self, thread_id: str, query: str) -> List[SearchResult]:
+        if "/" in thread_id:
+            _, thread_slug = thread_id.split("/")
+        else:
+            thread_slug = thread_id
+            
+        llm = OpenRouterLLMProvider()
+        query_vec = llm.get_embedding(query)
+        
+        # Scoped to thread
+        stmt = select(Node.id, Node.embedding).where(Node.thread_id == thread_slug).where(Node.embedding.is_not(None))
+        candidates = self.db.execute(stmt).all()
+        
+        vec_service = VectorService()
+        matches = vec_service.search_memory(query_vec, candidates)
+        
+        if not matches:
+            return []
+
+        node_ids = [m[0] for m in matches]
+        nodes = self.db.scalars(select(Node).where(Node.id.in_(node_ids))).all()
+        node_map = {n.id: n for n in nodes}
+        
+        results = []
+        for node_id, score in matches:
+            if node_id in node_map:
+                node = node_map[node_id]
+                results.append(SearchResult(
+                    node_id=node.id,
+                    content=node.content,
+                    score=score,
+                    thread_id=node.thread_id
+                ))
+        return results
 
     def get_project_overview(self, project_id: str) -> ProjectOverviewView:
         state = self.db.scalars(

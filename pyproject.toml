@@ -1,6 +1,6 @@
 [project]
 name = "vlt-cli"
-version = "0.1.0"
+version = "0.2.0"
 description = "A CLI tool for agent thought management"
 authors = [{name = "Wolfe", email = "wolfe@example.com"}]
 requires-python = ">=3.11"
