@@ -1,4 +1,5 @@
 import typer
+from pathlib import Path
 from rich import print
 from rich.table import Table
 from rich.markdown import Markdown
@@ -87,35 +88,61 @@ def set_key(key: str):
         
     print(f"[green]API Key saved to {env_path}[/green]")
 
+from vlt.core.identity import create_vlt_toml, load_project_identity
+
+# ...
+
 @app.command()
-def init():
+def init(
+    project: str = typer.Option(None, "--project", "-p", help="Initialize a vlt.toml for this directory with the given project name.")
+):
     """
-    Initialize the Vault DB. (Run this once).
+    Initialize the Vault DB or a Project Context.
     
-    Establishes the local SQLite database. Required before any cognitive persistence can occur.
+    - Default: Initializes the local DB (~/.vlt/vault.db).
+    - With --project: Creates a 'vlt.toml' file in the current directory, anchoring it to a project.
     """
+    if project:
+        # Create vlt.toml
+        project_id = project.lower().replace(" ", "-")
+        create_vlt_toml(Path("."), name=project, id=project_id)
+        print(f"[bold green]Initialized project '{project}' (id: {project_id}) in vlt.toml[/bold green]")
+        
+        # Ensure project exists in DB too
+        try:
+            service.create_project(name=project, description="Initialized via vlt init")
+        except Exception:
+            pass
+        return
+
     print("[bold green]Initializing Vault database...[/bold green]")
     init_db()
-    
-    # Check for API key but do not block
-    if not os.environ.get("VLT_OPENROUTER_API_KEY") and not os.path.exists(os.path.expanduser("~/.vlt/.env")):
-        print("[yellow]Notice: OpenRouter API Key is not set.[/yellow]")
-        print("Run [bold]vlt config set-key <YOUR_KEY>[/bold] to enable AI features.")
-            
-    print("[bold green]Done.[/bold green]")
+# ...
 
 @thread_app.command("new")
-def new_thread(project: str, name: str, initial_thought: str):
+def new_thread(
+    name: str = typer.Argument(..., help="Thread slug (e.g. 'optim-strategy')"),
+    initial_thought: str = typer.Argument(..., help="Initial thought"),
+    project: str = typer.Option(None, "--project", "-p", help="Project slug. Defaults to vlt.toml context.")
+):
     """
     The Cognitive Loop: Start a new reasoning chain.
     
-    Creates a dedicated stream for a specific problem. Links it to a Project context.
-    
-    Arguments:
-    - project: The high-level goal (e.g., 'crypto-bot').
-    - name: The specific problem (e.g., 'optim-strategy').
-    - initial_thought: The starting point of your reasoning.
+    Creates a dedicated stream. Links it to a Project context.
+    If 'vlt.toml' is present, the project is auto-detected.
     """
+    # 1. Resolve Project
+    if not project:
+        identity = load_project_identity()
+        if identity:
+            project = identity.id
+        else:
+            print("[red]Error: No project specified and no vlt.toml found.[/red]")
+            print("Usage: vlt thread new <name> <thought> --project <project>")
+            print("Or run: vlt init --project <name>")
+            raise typer.Exit(code=1)
+
+    print(f"DEBUG: Creating thread {project}/{name}")
     # Ensure project exists (auto-create for MVP)
     try:
         service.create_project(name=project, description="Auto-created project")
@@ -152,15 +179,22 @@ def push_thought(thread_id: str, content: str):
     node = service.add_thought(thread_id=thread_slug, content=content)
     print(f"[bold green]OK:[/bold green] {node.thread_id}/{node.sequence_id}")
 @app.command("overview")
-def overview(project_id: str = "default", json_output: bool = typer.Option(False, "--json", help="Output as JSON")):
+def overview(project_id: str = typer.Argument(None, help="Project ID"), json_output: bool = typer.Option(False, "--json", help="Output as JSON")):
     """
     List active Projects and their Thread States.
     
     The 'Wake Up' command. Use this to orient yourself in the broader project context
     before diving into specific threads.
     """
-    # Assuming 'default' or user passed arg.
-    # For MVP let's require project_id or infer.
+    if not project_id:
+        identity = load_project_identity()
+        if identity:
+            project_id = identity.id
+        else:
+            # Fallback to "default" or list all?
+            # For now, require it or default.
+            project_id = "default"
+
     view = service.get_project_overview(project_id)
     
     if json_output:
@@ -241,6 +275,11 @@ def seek(query: str, project: str = typer.Option(None, "--project", "-p", help="
     
     Query your permanent memory for similar problems or solutions encountered in the past.
     """
+    if not project:
+        identity = load_project_identity()
+        if identity:
+            project = identity.id
+
     results = service.search(query, project_id=project)
     
     if not results:
