@@ -13,6 +13,7 @@ class NodeView(BaseModel):
 
 class ThreadStateView(BaseModel):
     thread_id: str
+    project_id: str
     summary: str
     recent_nodes: List[NodeView]
     meta: dict

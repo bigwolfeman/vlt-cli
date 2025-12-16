@@ -17,15 +17,36 @@ class OpenRouterLLMProvider(ILLMProvider):
             return "LLM API Key missing. Cannot summarize."
             
         prompt = f"""
-        Current State: {context}
-        New Input: {new_content}
+        You are the 'Librarian' for an AI Agent's long-term memory.
+        Your goal is to maintain a structured "State Object" that allows the agent to resume work immediately after amnesia.
         
-        Task: Update the Current State. 
-        - If the New Input is a continuation, merge it.
-        - If it is a pivot, record the state change.
-        - If it contradicts previous state, update the 'Constraints'.
+        INPUTS:
+        1. Current State:
+        {context}
         
-        Return ONLY the updated summary in Markdown.
+        2. New Thoughts (The Delta):
+        {new_content}
+        
+        INSTRUCTIONS:
+        Update the State to reflect the New Thoughts. 
+        DO NOT just append a log. SYNTHESIZE the information.
+        
+        REQUIRED OUTPUT FORMAT (Markdown):
+        
+        # 🎯 Status: [Active Goal/Phase]
+        **Focus:** [What is the agent doing RIGHT NOW?]
+        
+        ## 🧠 Context & Architecture (The "Truth")
+        [Bulleted list of *current* facts, decisions, and architectural truths. Prune obsolete info.]
+        - Key: Value
+        
+        ## 📜 Pivot Log (Last 3 Major Decisions)
+        [Only list critical changes in direction or approach. Drop minor task completions.]
+        - Decision: ...
+        
+        ## ⏭️ Next Steps
+        [Immediate actionable tasks]
+        1. ...
         """
         
         headers = {

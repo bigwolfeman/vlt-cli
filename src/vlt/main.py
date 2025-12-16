@@ -148,7 +148,8 @@ def init(
 def new_thread(
     name: str = typer.Argument(..., help="Thread slug (e.g. 'optim-strategy')"),
     initial_thought: str = typer.Argument(..., help="Initial thought"),
-    project: str = typer.Option(None, "--project", "-p", help="Project slug. Defaults to vlt.toml context.")
+    project: str = typer.Option(None, "--project", "-p", help="Project slug. Defaults to vlt.toml context."),
+    author: str = typer.Option(None, "--author", help="Override the author for this thread.")
 ):
     """
     The Cognitive Loop: Start a new reasoning chain.
@@ -156,6 +157,9 @@ def new_thread(
     Creates a dedicated stream. Links it to a Project context.
     If 'vlt.toml' is present, the project is auto-detected.
     """
+    # Resolve Author
+    effective_author = author or state["author"]
+
     # 1. Resolve Project
     if not project:
         identity = load_project_identity()
@@ -164,7 +168,7 @@ def new_thread(
         else:
             print("[red]Error: No project specified and no vlt.toml found.[/red]")
             print("Usage: vlt thread new <name> <thought> --project <project>")
-            print("Or run: vlt init --project <name>")
+            print("Or run: vlt init --name <name>")
             raise typer.Exit(code=1)
 
     print(f"DEBUG: Creating thread {project}/{name}")
@@ -175,24 +179,28 @@ def new_thread(
         # Project might already exist, which is fine for now
         pass
         
-    thread = service.create_thread(project_id=project, name=name, initial_thought=initial_thought, author=state["author"])
+    thread = service.create_thread(project_id=project, name=name, initial_thought=initial_thought, author=effective_author)
     print(f"[bold green]CREATED:[/bold green] {thread.project_id}/{thread.id}")
     print(f"STATUS: {thread.status}")
     
-    if state["show_hint"]:
+    if effective_author == "user" and not os.environ.get("VLT_AUTHOR"):
         print("[dim](Tip: Use --author to sign your thoughts)[/dim]")
+
 @thread_app.command("push")
-def push_thought(thread_id: str, content: str):
+def push_thought(
+    thread_id: str = typer.Argument(..., help="Thread slug or path"),
+    content: str = typer.Argument(..., help="The thought to log"),
+    author: str = typer.Option(None, "--author", help="Override the author for this thought.")
+):
     """
     The Cognitive Loop: Commit a thought to permanent memory.
     
     Fire-and-forget logging. Use this to offload intermediate reasoning steps so you
     can free up context window space.
-    
-    Arguments:
-    - thread_id: The thread slug (e.g., 'optim-strategy') or full path 'project/thread'.
-    - content: The text to log.
     """
+    # Resolve Author
+    effective_author = author or state["author"]
+
     # Assuming thread_id format is project/thread or just thread if unique? 
     # For MVP assume we pass just thread slug or handle project/thread splitting if needed.
     # The spec examples show `vlt thread push crypto-bot/optim-strategy`.
@@ -204,10 +212,10 @@ def push_thought(thread_id: str, content: str):
     else:
         thread_slug = thread_id
 
-    node = service.add_thought(thread_id=thread_slug, content=content, author=state["author"])
+    node = service.add_thought(thread_id=thread_slug, content=content, author=effective_author)
     print(f"[bold green]OK:[/bold green] {node.thread_id}/{node.sequence_id}")
     
-    if state["show_hint"]:
+    if effective_author == "user" and not os.environ.get("VLT_AUTHOR"):
         print("[dim](Tip: Use --author to sign your thoughts)[/dim]")
 @app.command("overview")
 def overview(project_id: str = typer.Argument(None, help="Project ID"), json_output: bool = typer.Option(False, "--json", help="Output as JSON")):
@@ -277,7 +285,7 @@ def read_thread(
         print(json.dumps(view.model_dump(), default=str))
         return
 
-    print(Panel(Markdown(f"# Thread: {view.thread_id}\n\n{view.summary}"), title="Thread State", border_style="green"))
+    print(Panel(Markdown(f"# Thread: {view.thread_id}\n**Project:** {view.project_id}\n\n{view.summary}"), title="Thread State", border_style="green"))
     
     if view.meta:
          print(Panel(str(view.meta), title="Meta", border_style="yellow"))

@@ -144,6 +144,11 @@ class SqliteVaultService(IVaultService):
         else:
             thread_slug = thread_id
 
+        # Fetch thread to get project_id
+        thread = self.db.get(Thread, thread_slug)
+        if not thread:
+             raise VaultError(f"Thread {thread_slug} not found.")
+
         state = self.db.scalars(
             select(State)
             .where(State.target_id == thread_slug)
@@ -166,6 +171,7 @@ class SqliteVaultService(IVaultService):
 
         return ThreadStateView(
             thread_id=thread_slug,
+            project_id=thread.project_id,
             summary=state.summary if state else "No summary available.",
             recent_nodes=node_views,
             meta=state.meta if state else {}
